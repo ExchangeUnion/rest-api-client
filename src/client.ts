@@ -25,6 +25,7 @@ export default class ClientManager {
   private _mnemonic: string | undefined;
   private _subscriber: Subscriber;
   private _store: ConnextStore;
+  private _isInitializing = false;
 
   constructor(opts: InitClientManagerOptions) {
     this._logger = opts.logger;
@@ -45,12 +46,18 @@ export default class ClientManager {
     opts?: Partial<InitOptions>,
     subscriptions?: EventSubscription[],
   ): Promise<IConnextClient> {
+    if (this._isInitializing) {
+      throw new Error("Client is already initializing");
+    }
+    this._isInitializing = true;
     const mnemonic = opts?.mnemonic || this.mnemonic;
     if (!mnemonic) {
+      this._isInitializing = false;
       throw new Error("Cannot init Connext client without mnemonic");
     }
     if (this._client) {
       this._logger.info("Client is already connected - skipping initClient logic");
+      this._isInitializing = false;
       return this._client;
     }
     this.setMnemonic(mnemonic);
@@ -63,6 +70,7 @@ export default class ClientManager {
     const client = await connext.connect(network, clientOpts);
     this._client = client;
     this._logger.info("Client initialized successfully");
+    this._isInitializing = false;
     return client;
   }
 
